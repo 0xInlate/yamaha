@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+    @font-face {
+        font-family: 'Minecraft';
+        src: url('minecraft.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        font-family: 'Minecraft', 'Segoe UI', sans-serif;
+        background: transparent;
+    }
+    #content {
+        position: absolute;
+        inset: 0;
+        color: #fff;
+        overflow: hidden;
+    }
+    .page {
+        position: absolute;
+        inset: 5%;
+        display: flex;
+        opacity: 0;
+        pointer-events: none;
+        will-change: transform, opacity;
+        backface-visibility: hidden;
+        transform: translate3d(0, 0, 0) scale(1);
+        contain: layout style paint;
+        transition:
+            transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.45s ease;
+    }
+    .page.active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    .page.enter-from-right {
+        opacity: 0;
+        transform: translate3d(60%, 0, 0) scale(0.96);
+    }
+    .page.leave-to-left {
+        opacity: 0;
+        transform: translate3d(-40%, 0, 0) scale(0.94);
+    }
+    .page.enter-from-left {
+        opacity: 0;
+        transform: translate3d(-60%, 0, 0) scale(0.96);
+    }
+    .page.leave-to-right {
+        opacity: 0;
+        transform: translate3d(40%, 0, 0) scale(0.94);
+    }
+
+    /* --- TITLE: по центру --- */
+    .page.title {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 30px;
+        position: absolute;
+    }
+    .page.title .title-bg {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0.18;
+        filter: blur(2px);
+        z-index: 0;
+    }
+    .page.title .title-bg img {
+        max-width: 75%;
+        max-height: 75%;
+        object-fit: contain;
+        filter: drop-shadow(0 30px 80px rgba(255, 105, 180, 0.5));
+    }
+    .page.title .text-block {
+        position: relative;
+        z-index: 1;
+        max-width: 80%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 22px;
+    }
+    .page.title h1 {
+        font-size: 4.2rem;
+        letter-spacing: 2px;
+        line-height: 1.15;
+        background: linear-gradient(45deg, #ff69b4, #ff1493, #b06cff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: #ff69b4;
+        text-shadow: 0 0 60px rgba(255, 105, 180, 0.4);
+        filter: drop-shadow(0 4px 20px rgba(255, 105, 180, 0.35));
+    }
+    .page.title p {
+        font-size: 1.15rem;
+        line-height: 1.8;
+        color: #f0d8e0;
+        max-width: 700px;
+        letter-spacing: 0.5px;
+        opacity: 0.9;
+    }
+    .page.title .divider {
+        width: 80px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #ff69b4, transparent);
+        border-radius: 2px;
+        box-shadow: 0 0 14px rgba(255, 105, 180, 0.7);
+    }
+
+    /* --- DEFAULT: текст слева, фото справа --- */
+    .page.default {
+        align-items: center;
+        justify-content: space-around;
+        gap: 40px;
+    }
+    .page.default .text-block { max-width: 45%; }
+    .page.default .text-block h1 {
+        font-size: 3.2rem;
+        margin-bottom: 25px;
+        letter-spacing: 1px;
+        background: linear-gradient(45deg, #ff69b4, #ff1493);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: #ff69b4;
+    }
+    .page.default .text-block p {
+        font-size: 1.05rem;
+        line-height: 1.8;
+        color: #f0d8e0;
+    }
+    .page.default .image-block {
+        max-width: 45%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .page.default .image-block img {
+        width: 100%;
+        max-width: 600px;
+        filter: drop-shadow(0 20px 40px rgba(255, 105, 180, 0.35));
+    }
+
+    /* --- TABLE --- */
+    .page.table {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+    }
+    .page.table h1 {
+        font-size: 2.4rem;
+        letter-spacing: 1px;
+        background: linear-gradient(45deg, #ff69b4, #ff1493);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: #ff69b4;
+    }
+    .page.table table {
+        border-collapse: collapse;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 14px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    }
+    .page.table th, .page.table td {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 14px 24px;
+        text-align: center;
+        color: #fff;
+        font-size: 0.95rem;
+    }
+    .page.table th {
+        background: rgba(255, 105, 180, 0.28);
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+    .page.table tr:nth-child(even) td {
+        background: rgba(255, 255, 255, 0.03);
+    }
+</style>
+</head>
+<body>
+    <div id="content"></div>
+
+    <script>
+        let config = null;
+        let currentPage = 0;
+        let leavingPage = null;
+        let colliderTimer = null;
+
+        function snapAway(el) {
+            if (!el) return;
+            el.style.transition = 'none';
+            el.classList.remove('active', 'enter-from-right', 'enter-from-left', 'leave-to-left', 'leave-to-right');
+            void el.offsetWidth;
+            el.style.transition = '';
+        }
+
+        async function load() {
+            try {
+                const res = await fetch('cfg.json', { cache: 'no-store' });
+                config = await res.json();
+                if (!config.pages || !config.pages.length) {
+                    document.getElementById('content').innerHTML =
+                        '<div style="color:#ff69b4;font-size:1.2rem;">cfg.json пуст</div>';
+                    return;
+                }
+                render();
+                notifyUI();
+                scheduleSendColliders(100);
+            } catch (e) {
+                console.error('Не удалось загрузить cfg.json:', e);
+                document.getElementById('content').innerHTML =
+                    '<div style="color:#ff69b4;font-size:1.2rem;">Ошибка загрузки cfg.json</div>';
+            }
+        }
+
+        function render() {
+            const container = document.getElementById('content');
+            container.innerHTML = '';
+            config.pages.forEach((p, i) => {
+                const type = p.type || 'default';
+                const pageEl = document.createElement('div');
+                pageEl.className = 'page ' + type + (i === currentPage ? ' active' : '');
+                pageEl.dataset.index = i;
+
+                if (type === 'table') {
+                    pageEl.innerHTML = buildTable(p);
+                } else if (type === 'title') {
+                    pageEl.innerHTML = buildTitle(p);
+                } else {
+                    pageEl.innerHTML = buildDefault(p);
+                }
+                container.appendChild(pageEl);
+            });
+        }
+
+        function buildTitle(p) {
+            const img = p.image
+                ? `<img src="${p.image}" alt="" onerror="this.style.display='none'">`
+                : '';
+            return `
+                <div class="title-bg">${img}</div>
+                <div class="text-block">
+                    <h1>${p.title || ''}</h1>
+                    <div class="divider"></div>
+                    <p>${p.text || ''}</p>
+                </div>
+            `;
+        }
+
+        function buildDefault(p) {
+            const img = p.image
+                ? `<img src="${p.image}" alt="" onerror="this.style.display='none'">`
+                : '';
+            return `
+                <div class="text-block">
+                    <h1>${p.title || ''}</h1>
+                    <p>${p.text || ''}</p>
+                </div>
+                <div class="image-block">${img}</div>
+            `;
+        }
+
+        function buildTable(p) {
+            const cols = p.cols || (p.headers ? p.headers.length : 3);
+            const rows = p.rows || (p.data ? p.data.length : 3);
+            let html = '';
+            if (p.title) html += `<h1>${p.title}</h1>`;
+            html += '<table>';
+            if (p.headers && p.headers.length) {
+                html += '<tr>' + p.headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+            }
+            for (let r = 0; r < rows; r++) {
+                html += '<tr>';
+                for (let c = 0; c < cols; c++) {
+                    const val = (p.data && p.data[r] && p.data[r][c] !== undefined) ? p.data[r][c] : '';
+                    html += `<td>${val}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</table>';
+            return html;
+        }
+
+        function goToPage(n) {
+            if (!config) return;
+            if (n < 0 || n >= config.pages.length) return;
+            if (n === currentPage) return;
+
+            const pages = document.querySelectorAll('.page');
+            const oldPage = pages[currentPage];
+            const newPage = pages[n];
+            if (!oldPage || !newPage) return;
+
+            if (leavingPage && leavingPage !== oldPage) snapAway(leavingPage);
+            leavingPage = null;
+
+            const forward = n > currentPage;
+
+            newPage.classList.remove('active', 'enter-from-right', 'enter-from-left', 'leave-to-left', 'leave-to-right');
+            newPage.classList.add(forward ? 'enter-from-right' : 'enter-from-left');
+            void newPage.offsetWidth;
+            newPage.classList.remove('enter-from-right', 'enter-from-left');
+            newPage.classList.add('active');
+
+            oldPage.classList.remove('active');
+            oldPage.classList.add(forward ? 'leave-to-left' : 'leave-to-right');
+            leavingPage = oldPage;
+
+            currentPage = n;
+            notifyUI();
+            scheduleSendColliders(700);
+        }
+
+        function notifyUI() {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'page-changed',
+                    page: currentPage,
+                    total: config ? config.pages.length : 0
+                }, '*');
+            }
+        }
+
+        function scheduleSendColliders(delay) {
+            if (colliderTimer) clearTimeout(colliderTimer);
+            colliderTimer = setTimeout(sendColliders, delay);
+        }
+
+        function sendColliders() {
+            const active = document.querySelector('.page.active');
+            if (!active || !window.parent || window.parent === window) return;
+
+            const selectors = '.text-block, .image-block, .page.table h1, .page.table table';
+            const els = active.querySelectorAll(selectors);
+            const rects = [];
+
+            els.forEach(el => {
+                const r = el.getBoundingClientRect();
+                if (r.width > 4 && r.height > 4) {
+                    rects.push({
+                        x: Math.round(r.left),
+                        y: Math.round(r.top),
+                        w: Math.round(r.width),
+                        h: Math.round(r.height)
+                    });
+                }
+            });
+
+            window.parent.postMessage({ type: 'colliders', rects }, '*');
+        }
+
+        window.addEventListener('resize', () => scheduleSendColliders(150));
+
+        window.addEventListener('keydown', (e) => {
+            const keys = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', ' ', 'Home', 'End',
+                          'o', 'O', 'Escape', 'щ', 'Щ',
+                          't', 'T', 'е', 'Е',
+                          'l', 'L', 'д', 'Д',
+                          'Insert'];
+            if (!keys.includes(e.key)) return;
+            e.preventDefault();
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'key', key: e.key }, '*');
+            }
+        });
+
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || d.type !== 'goto') return;
+            goToPage(d.page);
+        });
+
+        document.addEventListener('click', () => window.focus());
+
+        window.goToPage = goToPage;
+        window.getPageCount = () => config ? config.pages.length : 0;
+        window.getCurrentPage = () => currentPage;
+
+        load();
+    </script>
+</body>
+</html>

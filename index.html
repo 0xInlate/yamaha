@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #2a1a26;
+        }
+        iframe {
+            position: absolute;
+            border: none;
+            display: block;
+        }
+        #bg-frame {
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        #content-frame {
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            background: transparent;
+        }
+        #ui-frame {
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="bg-frame" src="background.html"></iframe>
+    <iframe id="content-frame" src="content.html"></iframe>
+    <iframe id="ui-frame" src="ui.html"></iframe>
+
+    <script>
+        const bgFrame = document.getElementById('bg-frame');
+        const contentFrame = document.getElementById('content-frame');
+        const uiFrame = document.getElementById('ui-frame');
+
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d || !d.type) return;
+
+            if (d.type === 'key' || d.type === 'page-changed') {
+                if (uiFrame.contentWindow) {
+                    uiFrame.contentWindow.postMessage(d, '*');
+                }
+            } else if (d.type === 'goto') {
+                if (contentFrame.contentWindow) {
+                    contentFrame.contentWindow.postMessage(d, '*');
+                }
+            } else if (d.type === 'colliders') {
+                if (bgFrame.contentWindow) {
+                    bgFrame.contentWindow.postMessage(d, '*');
+                }
+            } else if (d.type === 'fps-cap') {
+                if (bgFrame.contentWindow) {
+                    bgFrame.contentWindow.postMessage(d, '*');
+                }
+                if (contentFrame.contentWindow) {
+                    contentFrame.contentWindow.postMessage(d, '*');
+                }
+            }
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                if (contentFrame.contentWindow) contentFrame.contentWindow.focus();
+            }, 400);
+        });
+    </script>
+</body>
+</html>

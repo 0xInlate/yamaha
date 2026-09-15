@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<style>
+    @font-face {
+        font-family: 'Minecraft';
+        src: url('minecraft.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+        width: 100%; height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: 'Minecraft', 'Segoe UI', sans-serif;
+        pointer-events: none;
+    }
+
+    .ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    .counter {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 22px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: #ffb6d5;
+        font-size: 1rem;
+        letter-spacing: 2px;
+        pointer-events: auto;
+        user-select: none;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+    .counter:hover {
+        background: rgba(255, 105, 180, 0.22);
+        box-shadow: 0 0 20px rgba(255, 105, 180, 0.45);
+    }
+    .counter .current { color: #ff69b4; font-size: 1.2rem; }
+    .counter .sep     { opacity: 0.5; margin: 0 6px; }
+    .counter .total   { opacity: 0.75; }
+
+    .dots {
+        position: absolute;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+        pointer-events: auto;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 80vw;
+    }
+    .dot {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #ffb6d5;
+        font-size: 0.85rem;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.25s ease;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .dot:hover {
+        background: rgba(255, 105, 180, 0.22);
+        box-shadow: 0 0 18px rgba(255, 105, 180, 0.45);
+    }
+    .dot.active {
+        background: rgba(255, 105, 180, 0.55);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 24px rgba(255, 105, 180, 0.7);
+    }
+
+    .minimap {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4vh 4vw;
+        background: rgba(20, 10, 20, 0.75);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.35s ease;
+    }
+    .minimap.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .minimap-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 18px;
+        width: 100%;
+        max-width: 1400px;
+        max-height: 100%;
+        overflow-y: auto;
+        padding: 30px 20px;
+        -webkit-mask-image:
+            linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%),
+            linear-gradient(to right,  transparent 0%, #000 6%, #000 94%, transparent 100%);
+        -webkit-mask-composite: source-in;
+        mask-image:
+            linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%),
+            linear-gradient(to right,  transparent 0%, #000 6%, #000 94%, transparent 100%);
+        mask-composite: intersect;
+    }
+    .minimap-grid::-webkit-scrollbar { width: 8px; }
+    .minimap-grid::-webkit-scrollbar-thumb {
+        background: rgba(255, 105, 180, 0.4);
+        border-radius: 4px;
+    }
+
+    .thumb {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 105, 180, 0.35);
+        box-shadow:
+            0 0 0 1px rgba(255, 105, 180, 0.08),
+            0 0 18px rgba(255, 105, 180, 0.18),
+            inset 0 0 12px rgba(255, 105, 180, 0.06);
+        cursor: pointer;
+        transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        aspect-ratio: 16 / 10;
+        display: flex;
+        flex-direction: column;
+        padding: 16px;
+        color: #fff;
+    }
+    .thumb:hover {
+        transform: translateY(-4px) scale(1.02);
+        border-color: rgba(255, 105, 180, 0.75);
+        box-shadow:
+            0 0 0 1px rgba(255, 105, 180, 0.15),
+            0 0 32px rgba(255, 105, 180, 0.45),
+            inset 0 0 18px rgba(255, 105, 180, 0.1);
+    }
+    .thumb.active {
+        border-color: #ff69b4;
+        box-shadow:
+            0 0 0 1px rgba(255, 105, 180, 0.3),
+            0 0 40px rgba(255, 105, 180, 0.7),
+            inset 0 0 20px rgba(255, 105, 180, 0.15);
+    }
+    .thumb-num {
+        position: absolute;
+        top: 8px;
+        left: 10px;
+        font-size: 0.7rem;
+        color: #ff69b4;
+        letter-spacing: 1px;
+        opacity: 0.7;
+    }
+    .thumb-title {
+        font-size: 0.95rem;
+        color: #ffb6d5;
+        line-height: 1.3;
+        margin-top: 14px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .thumb-type {
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.4);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .thumb-preview {
+        position: absolute;
+        inset: 0;
+        opacity: 0.15;
+        background-size: cover;
+        background-position: center;
+        pointer-events: none;
+    }
+
+    .minimap-hint {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    /* --- Таймер (вне миникарты, поверх всего) --- */
+    .timer {
+        position: absolute;
+        top: 30px;
+        left: 30px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: rgba(20, 12, 22, 0.85);
+        border: 1px solid rgba(255, 105, 180, 0.4);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow:
+            0 8px 30px rgba(0, 0, 0, 0.5),
+            0 0 20px rgba(255, 105, 180, 0.2);
+        color: #ffb6d5;
+        font-size: 1.4rem;
+        letter-spacing: 3px;
+        user-select: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        z-index: 110;
+    }
+    body.minimap-open .timer,
+    body.timer-on-top .timer {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+    body.timer-on-top .timer {
+        z-index: 9999;
+    }
+    .timer-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: move;
+    }
+    .timer .time {
+        color: #ff69b4;
+        font-size: 1.6rem;
+        min-width: 130px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+    .timer .btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #ffb6d5;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+    .timer .btn svg {
+        width: 14px;
+        height: 14px;
+        fill: #ffb6d5;
+        transition: fill 0.2s ease;
+    }
+    .timer .btn:hover {
+        background: rgba(255, 105, 180, 0.3);
+        border-color: rgba(255, 105, 180, 0.6);
+        box-shadow: 0 0 14px rgba(255, 105, 180, 0.5);
+    }
+    .timer .btn:hover svg { fill: #fff; }
+    .timer .btn.recording {
+        background: rgba(255, 60, 120, 0.35);
+        border-color: #ff3c78;
+        box-shadow: 0 0 16px rgba(255, 60, 120, 0.8);
+        animation: recPulse 1.2s infinite;
+    }
+    .timer .btn.recording svg { fill: #fff; }
+    @keyframes recPulse {
+        0%, 100% { box-shadow: 0 0 16px rgba(255, 60, 120, 0.8); }
+        50%      { box-shadow: 0 0 26px rgba(255, 60, 120, 1); }
+    }
+    .timer .btn.arrow svg {
+        transition: transform 0.3s ease;
+    }
+    .timer .btn.arrow.open svg {
+        transform: rotate(180deg);
+    }
+
+    .timer-panel {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease, opacity 0.3s ease;
+        opacity: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .timer-panel.open {
+        max-height: 400px;
+        opacity: 1;
+    }
+    .timer-panel .panel-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 105, 180, 0.25);
+    }
+    .timer-opt {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: rgba(255, 182, 213, 0.85);
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        user-select: none;
+    }
+    .timer-opt:hover {
+        background: rgba(255, 105, 180, 0.12);
+    }
+    .timer-opt .checkbox {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1.5px solid rgba(255, 105, 180, 0.5);
+        background: rgba(255, 255, 255, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+    .timer-opt .checkbox svg {
+        width: 10px;
+        height: 10px;
+        fill: #fff;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .timer-opt.checked .checkbox {
+        background: rgba(255, 105, 180, 0.7);
+        border-color: #ff69b4;
+        box-shadow: 0 0 10px rgba(255, 105, 180, 0.6);
+    }
+    .timer-opt.checked .checkbox svg { opacity: 1; }
+
+    .timer-action {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        color: rgba(255, 182, 213, 0.85);
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+        user-select: none;
+    }
+    .timer-action:hover {
+        background: rgba(255, 105, 180, 0.18);
+        color: #fff;
+    }
+    .timer-action svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+        flex-shrink: 0;
+    }
+
+    .lap-list {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-height: 100px;
+        overflow-y: auto;
+        padding: 4px 0;
+        font-size: 0.7rem;
+        color: rgba(255, 182, 213, 0.7);
+        letter-spacing: 1px;
+    }
+    .lap-list::-webkit-scrollbar { width: 4px; }
+    .lap-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 105, 180, 0.4);
+        border-radius: 2px;
+    }
+    .lap-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 8px;
+    }
+    .lap-item .n { color: #ff69b4; }
+    .lap-item .t { color: rgba(255, 182, 213, 0.9); }
+
+    /* --- Debug --- */
+    .debug-menu {
+        position: absolute;
+        top: 30px;
+        right: 30px;
+        width: 270px;
+        background: rgba(20, 12, 22, 0.9);
+        border: 1px solid rgba(255, 105, 180, 0.4);
+        border-radius: 10px;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow:
+            0 10px 40px rgba(0, 0, 0, 0.5),
+            0 0 24px rgba(255, 105, 180, 0.2);
+        color: #ffb6d5;
+        font-size: 0.8rem;
+        user-select: none;
+        pointer-events: auto;
+        opacity: 0;
+        transform: translate(30px, -10px) scale(0.95);
+        transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 200;
+        display: none;
+    }
+    .debug-menu.visible {
+        display: block;
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+    }
+    .debug-menu.closing {
+        opacity: 0;
+        transform: translate(60px, -10px) scale(0.9);
+        pointer-events: none;
+    }
+    .debug-header {
+        padding: 8px 12px;
+        background: rgba(255, 105, 180, 0.2);
+        border-bottom: 1px solid rgba(255, 105, 180, 0.3);
+        border-radius: 10px 10px 0 0;
+        cursor: move;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+    }
+    .debug-header .title { color: #ff69b4; }
+    .debug-header .close {
+        width: 18px; height: 18px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 4px;
+        cursor: pointer;
+        color: rgba(255, 255, 255, 0.5);
+        transition: all 0.2s;
+    }
+    .debug-header .close:hover {
+        background: rgba(255, 60, 120, 0.4);
+        color: #fff;
+    }
+    .debug-body {
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .debug-body::-webkit-scrollbar { width: 5px; }
+    .debug-body::-webkit-scrollbar-thumb {
+        background: rgba(255, 105, 180, 0.4);
+        border-radius: 3px;
+    }
+    .debug-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 6px;
+        border-radius: 4px;
+        transition: background 0.15s;
+    }
+    .debug-row:hover { background: rgba(255, 105, 180, 0.08); }
+    .debug-row .label {
+        color: rgba(255, 182, 213, 0.7);
+        font-size: 0.72rem;
+        letter-spacing: 0.5px;
+    }
+    .debug-row .value {
+        color: #ff69b4;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+    .debug-row .value.good { color: #6ee7a8; }
+    .debug-row .value.warn { color: #ffcc66; }
+    .debug-row .value.bad  { color: #ff5c88; }
+
+    .debug-select {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 105, 180, 0.35);
+        border-radius: 4px;
+        color: #ff69b4;
+        font-size: 0.72rem;
+        font-family: inherit;
+        padding: 2px 6px;
+        cursor: pointer;
+        outline: none;
+        letter-spacing: 0.5px;
+    }
+    .debug-select:focus {
+        border-color: rgba(255, 105, 180, 0.7);
+        box-shadow: 0 0 8px rgba(255, 105, 180, 0.4);
+    }
+    .debug-select option {
+        background: #1a0f18;
+        color: #ffb6d5;
+    }
+
+    .debug-sep {
+        height: 1px;
+        background: rgba(255, 105, 180, 0.2);
+        margin: 6px 0;
+    }
+
+    .debug-section {
+        color: #ff69b4;
+        font-size: 0.68rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        opacity: 0.7;
+        margin: 4px 0 2px 2px;
+    }
+
+    .debug-graph {
+        height: 40px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        margin: 4px 0;
+        position: relative;
+        overflow: hidden;
+    }
+    .debug-graph canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+</style>
+</head>
+<body>
+    <div class="ui-layer">
+        <div class="dots" id="dots"></div>
+
+        <div class="counter" id="counter" title="Открыть миникарту (O)">
+            <span class="current" id="cur">1</span>
+            <span class="sep">/</span>
+            <span class="total" id="tot">1</span>
+        </div>
+    </div>
+
+    <!-- Таймер вне миникарты — поверх всего -->
+    <div class="timer" id="timer">
+        <div class="timer-row" id="timerDragHandle">
+            <div class="btn" id="timerToggle" title="Старт / Пауза">
+                <svg viewBox="0 0 24 24" id="timerToggleIcon">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+            <div class="time" id="timerTime">00:00:00</div>
+            <div class="btn" id="timerReset" title="Сброс">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/>
+                </svg>
+            </div>
+            <div class="btn arrow" id="timerArrow" title="Опции">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="timer-panel" id="timerPanel">
+            <div class="panel-inner">
+                <div class="timer-opt" id="optOnTop">
+                    <div class="checkbox">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z"/></svg>
+                    </div>
+                    <span>Поверх всего</span>
+                </div>
+
+                <div class="timer-action" id="actLap">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <span>Отметка (Lap)</span>
+                </div>
+
+                <div class="lap-list" id="lapList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug — независимо от миникарты -->
+    <div class="debug-menu" id="debugMenu">
+        <div class="debug-header" id="debugHeader">
+            <span class="title">DEBUG</span>
+            <div class="close" id="debugClose">×</div>
+        </div>
+        <div class="debug-body">
+            <div class="debug-section">Performance</div>
+            <div class="debug-row"><span class="label">FPS</span><span class="value" id="dbgFps">–</span></div>
+            <div class="debug-row"><span class="label">Frame</span><span class="value" id="dbgFrame">–</span></div>
+            <div class="debug-row">
+                <span class="label">Frame cap</span>
+                <select class="debug-select" id="dbgFpsCap">
+                    <option value="0">Unlimited</option>
+                    <option value="30">30</option>
+                    <option value="60" selected>60</option>
+                    <option value="75">75</option>
+                    <option value="90">90</option>
+                    <option value="120">120</option>
+                    <option value="144">144</option>
+                </select>
+            </div>
+            <div class="debug-graph"><canvas id="dbgGraph"></canvas></div>
+            <div class="debug-row"><span class="label">Jank</span><span class="value" id="dbgJank">–</span></div>
+
+            <div class="debug-sep"></div>
+            <div class="debug-section">Memory</div>
+            <div class="debug-row"><span class="label">Used</span><span class="value" id="dbgMem">–</span></div>
+            <div class="debug-row"><span class="label">Limit</span><span class="value" id="dbgMemLimit">–</span></div>
+
+            <div class="debug-sep"></div>
+            <div class="debug-section">Viewport</div>
+            <div class="debug-row"><span class="label">Window</span><span class="value" id="dbgWin">–</span></div>
+            <div class="debug-row"><span class="label">DPR</span><span class="value" id="dbgDpr">–</span></div>
+
+            <div class="debug-sep"></div>
+            <div class="debug-section">Presentation</div>
+            <div class="debug-row"><span class="label">Slide</span><span class="value" id="dbgSlide">–</span></div>
+            <div class="debug-row"><span class="label">Time</span><span class="value" id="dbgTime">–</span></div>
+            <div class="debug-row"><span class="label">Laps</span><span class="value" id="dbgLaps">–</span></div>
+        </div>
+    </div>
+
+    <div class="minimap" id="minimap">
+        <div class="minimap-grid" id="minimapGrid"></div>
+        <div class="minimap-hint">O — закрыть · Insert — debug · T — таймер · L — lap</div>
+    </div>
+
+    <script>
+        let total = 0;
+        let current = 0;
+        let pagesMeta = [];
+        let minimapOpen = false;
+        let debugVisible = false;
+        let timerOnTop = false;
+
+        /* --- Таймер MM:SS:CS --- */
+        let timerRunning = false;
+        let timerStart = 0;
+        let timerElapsed = 0;
+        let timerInterval = null;
+        let laps = [];
+
+        const ICON_PLAY = '<path d="M8 5v14l11-7z"/>';
+        const ICON_PAUSE = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>';
+
+        function formatTime(ms) {
+            const totalCs = Math.floor(ms / 10);
+            const cs = String(totalCs % 100).padStart(2, '0');
+            const totalSec = Math.floor(totalCs / 100);
+            const s = String(totalSec % 60).padStart(2, '0');
+            const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
+            return `${m}:${s}:${cs}`;
+        }
+
+        function currentTimerValue() {
+            return timerElapsed + (timerRunning ? performance.now() - timerStart : 0);
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timerTime').textContent = formatTime(currentTimerValue());
+        }
+
+        function setToggleIcon(paused) {
+            document.getElementById('timerToggleIcon').innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
+        }
+
+        function startTimer() {
+            if (timerRunning) return;
+            timerRunning = true;
+            timerStart = performance.now();
+            timerInterval = setInterval(updateTimerDisplay, 30);
+            document.getElementById('timerToggle').classList.add('recording');
+            setToggleIcon(false);
+        }
+
+        function pauseTimer() {
+            if (!timerRunning) return;
+            timerElapsed += performance.now() - timerStart;
+            timerRunning = false;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            document.getElementById('timerToggle').classList.remove('recording');
+            setToggleIcon(true);
+            updateTimerDisplay();
+        }
+
+        function resetTimer() {
+            timerRunning = false;
+            timerElapsed = 0;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            laps = [];
+            renderLaps();
+            document.getElementById('timerToggle').classList.remove('recording');
+            setToggleIcon(true);
+            updateTimerDisplay();
+        }
+
+        function addLap() {
+            laps.push(currentTimerValue());
+            renderLaps();
+        }
+
+        function renderLaps() {
+            const el = document.getElementById('lapList');
+            if (!laps.length) { el.innerHTML = ''; return; }
+            el.innerHTML = laps.map((t, i) =>
+                `<div class="lap-item"><span class="n">#${i + 1}</span><span class="t">${formatTime(t)}</span></div>`
+            ).join('');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        document.getElementById('timerToggle').addEventListener('click', (e) => {
+            e.stopPropagation();
+            timerRunning ? pauseTimer() : startTimer();
+        });
+        document.getElementById('timerReset').addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetTimer();
+        });
+        document.getElementById('actLap').addEventListener('click', (e) => {
+            e.stopPropagation();
+            addLap();
+        });
+
+        document.getElementById('timerArrow').addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('timerArrow').classList.toggle('open');
+            document.getElementById('timerPanel').classList.toggle('open');
+        });
+
+        document.getElementById('optOnTop').addEventListener('click', (e) => {
+            e.stopPropagation();
+            timerOnTop = !timerOnTop;
+            document.getElementById('optOnTop').classList.toggle('checked', timerOnTop);
+            document.body.classList.toggle('timer-on-top', timerOnTop);
+        });
+
+        setToggleIcon(true);
+
+        /* --- Таймер: перетаскивание --- */
+        (function makeTimerDraggable() {
+            const el = document.getElementById('timer');
+            const handle = document.getElementById('timerDragHandle');
+            let dragging = false;
+            let offsetX = 0, offsetY = 0;
+
+            handle.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.btn')) return;
+                dragging = true;
+                const r = el.getBoundingClientRect();
+                offsetX = e.clientX - r.left;
+                offsetY = e.clientY - r.top;
+                el.style.transition = 'none';
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                let x = e.clientX - offsetX;
+                let y = e.clientY - offsetY;
+                x = Math.max(0, Math.min(window.innerWidth - el.offsetWidth, x));
+                y = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, y));
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (dragging) { dragging = false; el.style.transition = ''; }
+            });
+        })();
+
+        /* --- Debug --- */
+        let frameTimes = [];
+        let lastFrameTime = performance.now();
+        let jankCount = 0;
+        let jankResetTime = performance.now();
+        let fpsCap = 60;
+        let lastDebugTick = 0;
+        const graphCanvas = document.getElementById('dbgGraph');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        document.getElementById('dbgFpsCap').addEventListener('change', (e) => {
+            fpsCap = parseInt(e.target.value, 10) || 0;
+            broadcastFpsCap();
+        });
+
+        function broadcastFpsCap() {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'fps-cap', value: fpsCap }, '*');
+            }
+        }
+
+        function sizeGraph() {
+            const dpr = window.devicePixelRatio || 1;
+            const r = graphCanvas.getBoundingClientRect();
+            graphCanvas.width = r.width * dpr;
+            graphCanvas.height = r.height * dpr;
+            graphCtx.setTransform(1, 0, 0, 1, 0, 0);
+            graphCtx.scale(dpr, dpr);
+        }
+        window.addEventListener('resize', sizeGraph);
+        setTimeout(sizeGraph, 100);
+
+        function drawGraph() {
+            const w = graphCanvas.width / (window.devicePixelRatio || 1);
+            const h = graphCanvas.height / (window.devicePixelRatio || 1);
+            graphCtx.clearRect(0, 0, w, h);
+            if (frameTimes.length < 2) return;
+
+            const max = 33;
+            const step = w / (frameTimes.length - 1);
+
+            graphCtx.beginPath();
+            graphCtx.moveTo(0, h);
+            frameTimes.forEach((t, i) => {
+                const x = i * step;
+                const y = h - Math.min(t / max, 1) * h;
+                graphCtx.lineTo(x, y);
+            });
+            graphCtx.lineTo(w, h);
+            graphCtx.closePath();
+
+            const grad = graphCtx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, 'rgba(255, 105, 180, 0.7)');
+            grad.addColorStop(1, 'rgba(255, 105, 180, 0.05)');
+            graphCtx.fillStyle = grad;
+            graphCtx.fill();
+
+            graphCtx.beginPath();
+            frameTimes.forEach((t, i) => {
+                const x = i * step;
+                const y = h - Math.min(t / max, 1) * h;
+                if (i === 0) graphCtx.moveTo(x, y);
+                else graphCtx.lineTo(x, y);
+            });
+            graphCtx.strokeStyle = '#ff69b4';
+            graphCtx.lineWidth = 1.2;
+            graphCtx.stroke();
+        }
+
+        function debugTick(now) {
+            const dt = now - lastFrameTime;
+            lastFrameTime = now;
+
+            frameTimes.push(dt);
+            if (frameTimes.length > 60) frameTimes.shift();
+
+            if (dt > 50) jankCount++;
+
+            const fps = Math.round(1000 / Math.max(dt, 1));
+            document.getElementById('dbgFrame').textContent = dt.toFixed(1) + ' ms';
+
+            const fpsEl = document.getElementById('dbgFps');
+            fpsEl.textContent = fps;
+            fpsEl.className = 'value ' + (fps >= 55 ? 'good' : fps >= 30 ? 'warn' : 'bad');
+
+            document.getElementById('dbgJank').textContent = jankCount;
+
+            if (now - jankResetTime > 5000) {
+                jankCount = 0;
+                jankResetTime = now;
+            }
+
+            if (performance.memory) {
+                const used = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+                const limit = (performance.memory.jsHeapSizeLimit / 1048576).toFixed(0);
+                document.getElementById('dbgMem').textContent = used + ' MB';
+                document.getElementById('dbgMemLimit').textContent = limit + ' MB';
+            } else {
+                document.getElementById('dbgMem').textContent = 'n/a';
+                document.getElementById('dbgMemLimit').textContent = 'n/a';
+            }
+
+            document.getElementById('dbgWin').textContent = window.innerWidth + '×' + window.innerHeight;
+            document.getElementById('dbgDpr').textContent = (window.devicePixelRatio || 1).toFixed(2);
+            document.getElementById('dbgSlide').textContent = (current + 1) + ' / ' + total;
+            document.getElementById('dbgTime').textContent = formatTime(currentTimerValue());
+            document.getElementById('dbgLaps').textContent = laps.length;
+
+            if (debugVisible) drawGraph();
+        }
+
+        function debugLoop(ts) {
+            const now = performance.now();
+            const interval = fpsCap > 0 ? 1000 / fpsCap : 0;
+            if (interval === 0 || now - lastDebugTick >= interval) {
+                lastDebugTick = now;
+                debugTick(now);
+            }
+            requestAnimationFrame(debugLoop);
+        }
+        requestAnimationFrame(debugLoop);
+
+        /* --- Debug показать / скрыть --- */
+        function showDebug() {
+            const menu = document.getElementById('debugMenu');
+            menu.style.display = 'block';
+            menu.classList.remove('closing');
+            void menu.offsetWidth;
+            menu.classList.add('visible');
+            debugVisible = true;
+            setTimeout(sizeGraph, 50);
+        }
+        function hideDebug() {
+            const menu = document.getElementById('debugMenu');
+            debugVisible = false;
+            menu.classList.add('closing');
+            menu.classList.remove('visible');
+            setTimeout(() => {
+                menu.style.display = 'none';
+                menu.classList.remove('closing');
+            }, 320);
+        }
+        function toggleDebug() {
+            debugVisible ? hideDebug() : showDebug();
+        }
+        document.getElementById('debugClose').addEventListener('click', hideDebug);
+
+        /* --- Debug: перетаскивание --- */
+        (function makeDebugDraggable() {
+            const menu = document.getElementById('debugMenu');
+            const header = document.getElementById('debugHeader');
+            let dragging = false;
+            let offsetX = 0, offsetY = 0;
+
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.id === 'debugClose') return;
+                dragging = true;
+                const r = menu.getBoundingClientRect();
+                offsetX = e.clientX - r.left;
+                offsetY = e.clientY - r.top;
+                menu.style.transition = 'none';
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!dragging) return;
+                let x = e.clientX - offsetX;
+                let y = e.clientY - offsetY;
+                x = Math.max(0, Math.min(window.innerWidth - menu.offsetWidth, x));
+                y = Math.max(0, Math.min(window.innerHeight - menu.offsetHeight, y));
+                menu.style.left = x + 'px';
+                menu.style.top = y + 'px';
+                menu.style.right = 'auto';
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (dragging) { dragging = false; menu.style.transition = ''; }
+            });
+        })();
+
+        /* --- Контент --- */
+        function getContent() {
+            const f = window.parent.document.getElementById('content-frame');
+            return f ? f.contentWindow : null;
+        }
+
+        async function loadCfg() {
+            try {
+                const res = await fetch('cfg.json', { cache: 'no-store' });
+                const cfg = await res.json();
+                pagesMeta = cfg.pages || [];
+                total = pagesMeta.length;
+                buildDots();
+                buildMinimap();
+                updateUI();
+            } catch (e) {
+                console.error('UI: не удалось загрузить cfg.json', e);
+            }
+        }
+
+        function buildDots() {
+            const dotsEl = document.getElementById('dots');
+            dotsEl.innerHTML = '';
+            for (let i = 0; i < total; i++) {
+                const d = document.createElement('div');
+                d.className = 'dot';
+                d.textContent = i + 1;
+                d.dataset.index = i;
+                d.title = pagesMeta[i] && pagesMeta[i].title ? pagesMeta[i].title : ('Слайд ' + (i + 1));
+                d.addEventListener('click', () => goTo(i));
+                dotsEl.appendChild(d);
+            }
+        }
+
+        function buildMinimap() {
+            const grid = document.getElementById('minimapGrid');
+            grid.innerHTML = '';
+            pagesMeta.forEach((p, i) => {
+                const t = document.createElement('div');
+                t.className = 'thumb';
+                t.dataset.index = i;
+                const preview = p.image
+                    ? `<div class="thumb-preview" style="background-image:url('${p.image}')"></div>`
+                    : '';
+                t.innerHTML = `
+                    ${preview}
+                    <div class="thumb-num">${String(i + 1).padStart(2, '0')}</div>
+                    <div class="thumb-title">${p.title || ('Слайд ' + (i + 1))}</div>
+                    <div class="thumb-type">${p.type || 'default'}</div>
+                `;
+                t.addEventListener('click', () => { goTo(i); closeMinimap(); });
+                grid.appendChild(t);
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('cur').textContent = current + 1;
+            document.getElementById('tot').textContent = total;
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.classList.toggle('active', i === current);
+            });
+            document.querySelectorAll('.thumb').forEach((t, i) => {
+                t.classList.toggle('active', i === current);
+            });
+        }
+
+        function goTo(n) {
+            if (n < 0 || n >= total) return;
+            const content = getContent();
+            if (content && content.goToPage) {
+                content.goToPage(n);
+                current = n;
+                updateUI();
+            }
+        }
+
+        function next() { goTo(current + 1); }
+        function prev() { goTo(current - 1); }
+
+        function openMinimap() {
+            minimapOpen = true;
+            document.getElementById('minimap').classList.add('open');
+            document.body.classList.add('minimap-open');
+        }
+        function closeMinimap() {
+            minimapOpen = false;
+            document.getElementById('minimap').classList.remove('open');
+            document.body.classList.remove('minimap-open');
+        }
+        function toggleMinimap() {
+            minimapOpen ? closeMinimap() : openMinimap();
+        }
+
+        document.getElementById('counter').addEventListener('click', toggleMinimap);
+
+        function handleKey(k) {
+            if (k === 'o' || k === 'O' || k === 'щ' || k === 'Щ') {
+                toggleMinimap();
+                return true;
+            }
+            if (k === 'Insert') {
+                toggleDebug();
+                return true;
+            }
+            if (k === 'Escape') {
+                if (debugVisible) { hideDebug(); return true; }
+                if (minimapOpen) { closeMinimap(); return true; }
+            }
+            if ((k === 't' || k === 'T' || k === 'е' || k === 'Е') && minimapOpen) {
+                timerRunning ? pauseTimer() : startTimer();
+                return true;
+            }
+            if ((k === 'l' || k === 'L' || k === 'д' || k === 'Д') && minimapOpen) {
+                addLap();
+                return true;
+            }
+            if (minimapOpen) return false;
+
+            if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ') { next(); return true; }
+            if (k === 'ArrowLeft' || k === 'ArrowUp') { prev(); return true; }
+            if (k === 'Home') { goTo(0); return true; }
+            if (k === 'End') { goTo(total - 1); return true; }
+            return false;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (handleKey(e.key)) e.preventDefault();
+        });
+
+        window.addEventListener('message', (e) => {
+            const d = e.data;
+            if (!d) return;
+            if (d.type === 'page-changed') {
+                current = d.page;
+                if (d.total) total = d.total;
+                updateUI();
+            } else if (d.type === 'key') {
+                handleKey(d.key);
+            }
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const content = getContent();
+                if (content && content.getCurrentPage) {
+                    current = content.getCurrentPage();
+                }
+                loadCfg();
+                broadcastFpsCap();
+            }, 300);
+        });
+
+        window.uiGoTo = goTo;
+        window.uiNext = next;
+        window.uiPrev = prev;
+        window.uiToggleMinimap = toggleMinimap;
+        window.uiToggleDebug = toggleDebug;
+    </script>
+</body>
+</html>

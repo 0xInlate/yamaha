@@ -59,7 +59,6 @@
         transform: translate3d(40%, 0, 0) scale(0.94);
     }
 
-    /* --- TITLE: по центру --- */
     .page.title {
         flex-direction: column;
         align-items: center;
@@ -122,7 +121,6 @@
         box-shadow: 0 0 14px rgba(255, 105, 180, 0.7);
     }
 
-    /* --- DEFAULT: текст слева, фото справа --- */
     .page.default {
         align-items: center;
         justify-content: space-around;
@@ -156,21 +154,57 @@
         filter: drop-shadow(0 20px 40px rgba(255, 105, 180, 0.35));
     }
 
-    /* --- TABLE --- */
+    .page.default.vertical {
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 24px;
+        padding-top: 10px;
+    }
+    .page.default.vertical .text-block {
+        max-width: 90%;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .page.default.vertical .text-block h1 {
+        font-size: 2.4rem;
+        margin-bottom: 12px;
+    }
+    .page.default.vertical .text-block p {
+        font-size: 1rem;
+    }
+    .page.default.vertical .image-block {
+        max-width: 95%;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .page.default.vertical .image-block img {
+        max-height: 100%;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 20px 60px rgba(255, 105, 180, 0.4));
+    }
+
     .page.table {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 30px;
+        gap: 20px;
     }
     .page.table h1 {
-        font-size: 2.4rem;
+        font-size: 2.2rem;
         letter-spacing: 1px;
         background: linear-gradient(45deg, #ff69b4, #ff1493);
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
         color: #ff69b4;
+        flex-shrink: 0;
     }
     .page.table table {
         border-collapse: collapse;
@@ -183,10 +217,10 @@
     }
     .page.table th, .page.table td {
         border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 14px 24px;
+        padding: 12px 20px;
         text-align: center;
         color: #fff;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
     }
     .page.table th {
         background: rgba(255, 105, 180, 0.28);
@@ -195,6 +229,77 @@
     }
     .page.table tr:nth-child(even) td {
         background: rgba(255, 255, 255, 0.03);
+    }
+
+    .page.table .terms-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        width: 100%;
+        max-width: 1500px;
+        max-height: 72vh;
+        overflow-y: auto;
+        padding: 4px 12px 4px 4px;
+        align-self: center;
+    }
+    .page.table .terms-grid::-webkit-scrollbar { width: 6px; }
+    .page.table .terms-grid::-webkit-scrollbar-thumb {
+        background: rgba(255, 105, 180, 0.5);
+        border-radius: 3px;
+    }
+    .term-card {
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border-left: 3px solid #ff69b4;
+        border-radius: 8px;
+        transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    .term-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255, 105, 180, 0.08), transparent 60%);
+        pointer-events: none;
+    }
+    .term-card:hover {
+        background: rgba(255, 105, 180, 0.12);
+        transform: translateX(4px);
+        box-shadow: 0 0 20px rgba(255, 105, 180, 0.35);
+    }
+    .term-card .term-name {
+        color: #ff69b4;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+        letter-spacing: 0.5px;
+        position: relative;
+    }
+    .term-card .term-full {
+        color: rgba(255, 182, 213, 0.5);
+        font-size: 0.68rem;
+        margin-bottom: 5px;
+        letter-spacing: 0.4px;
+        position: relative;
+    }
+    .term-card .term-desc {
+        color: #f0d8e0;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        position: relative;
+    }
+
+    .page.image {
+        align-items: center;
+        justify-content: center;
+    }
+    .page.image img {
+        width: 100%;
+        height: 100%;
+        max-width: 88%;
+        max-height: 88%;
+        object-fit: contain;
+        filter: drop-shadow(0 30px 80px rgba(255, 105, 180, 0.5));
     }
 </style>
 </head>
@@ -239,17 +344,29 @@
             container.innerHTML = '';
             config.pages.forEach((p, i) => {
                 const type = p.type || 'default';
+                const layout = p.layout ? ' ' + p.layout : '';
                 const pageEl = document.createElement('div');
-                pageEl.className = 'page ' + type + (i === currentPage ? ' active' : '');
+                pageEl.className = 'page ' + type + layout + (i === currentPage ? ' active' : '');
                 pageEl.dataset.index = i;
 
                 if (type === 'table') {
-                    pageEl.innerHTML = buildTable(p);
+                    pageEl.innerHTML = (p.layout === 'columns') ? buildTermsGrid(p) : buildTable(p);
                 } else if (type === 'title') {
                     pageEl.innerHTML = buildTitle(p);
+                } else if (type === 'image') {
+                    pageEl.innerHTML = buildImageOnly(p);
                 } else {
                     pageEl.innerHTML = buildDefault(p);
                 }
+
+                if (p.imageSize) {
+                    const img = pageEl.querySelector('img');
+                    if (img) {
+                        img.style.maxWidth = p.imageSize;
+                        img.style.maxHeight = p.imageSize;
+                    }
+                }
+
                 container.appendChild(pageEl);
             });
         }
@@ -272,13 +389,19 @@
             const img = p.image
                 ? `<img src="${p.image}" alt="" onerror="this.style.display='none'">`
                 : '';
+            const textHtml = p.text ? `<p>${p.text}</p>` : '';
             return `
                 <div class="text-block">
                     <h1>${p.title || ''}</h1>
-                    <p>${p.text || ''}</p>
+                    ${textHtml}
                 </div>
                 <div class="image-block">${img}</div>
             `;
+        }
+
+        function buildImageOnly(p) {
+            if (!p.image) return '';
+            return `<img src="${p.image}" alt="" onerror="this.style.display='none'">`;
         }
 
         function buildTable(p) {
@@ -299,6 +422,23 @@
                 html += '</tr>';
             }
             html += '</table>';
+            return html;
+        }
+
+        function buildTermsGrid(p) {
+            let html = '';
+            if (p.title) html += `<h1>${p.title}</h1>`;
+            html += '<div class="terms-grid">';
+            (p.data || []).forEach(row => {
+                html += `
+                    <div class="term-card">
+                        <div class="term-name">${row[0] || ''}</div>
+                        <div class="term-full">${row[1] || ''}</div>
+                        <div class="term-desc">${row[2] || ''}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
             return html;
         }
 
@@ -351,7 +491,7 @@
             const active = document.querySelector('.page.active');
             if (!active || !window.parent || window.parent === window) return;
 
-            const selectors = '.text-block, .image-block, .page.table h1, .page.table table';
+            const selectors = '.text-block, .image-block, .page.table h1, .page.table table, .page.table .terms-grid, .page.image img';
             const els = active.querySelectorAll(selectors);
             const rects = [];
 

@@ -217,7 +217,73 @@
         text-transform: uppercase;
     }
 
-    /* --- Таймер (вне миникарты, поверх всего) --- */
+    .minimap-close {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ff69b4;
+        font-size: 2rem;
+        font-weight: 300;
+        line-height: 1;
+        cursor: pointer;
+        pointer-events: auto;
+        user-select: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 130;
+        filter: drop-shadow(0 0 8px rgba(255, 105, 180, 0.4));
+    }
+    .minimap-close:hover {
+        color: #fff;
+        transform: rotate(90deg) scale(1.25);
+        filter: drop-shadow(0 0 20px rgba(255, 105, 180, 1));
+    }
+    .minimap-close:active {
+        transform: rotate(90deg) scale(1.05);
+    }
+
+    .nav-mini {
+        position: absolute;
+        bottom: 30px;
+        right: 30px;
+        display: flex;
+        gap: 8px;
+        pointer-events: auto;
+        z-index: 20;
+    }
+    .nav-mini .nav-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(255, 182, 213, 0.55);
+        font-size: 1.6rem;
+        line-height: 1;
+        cursor: pointer;
+        user-select: none;
+        opacity: 0.35;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        filter: drop-shadow(0 0 6px rgba(255, 105, 180, 0.25));
+    }
+    .nav-mini .nav-btn:hover {
+        opacity: 1;
+        color: #fff;
+        transform: scale(1.3);
+        filter: drop-shadow(0 0 16px rgba(255, 105, 180, 0.9));
+    }
+    .nav-mini .nav-btn:active {
+        transform: scale(1.05);
+    }
+    .nav-mini .nav-btn.disabled {
+        opacity: 0.1;
+        pointer-events: none;
+    }
+
     .timer {
         position: absolute;
         top: 30px;
@@ -420,7 +486,6 @@
     .lap-item .n { color: #ff69b4; }
     .lap-item .t { color: rgba(255, 182, 213, 0.9); }
 
-    /* --- Debug --- */
     .debug-menu {
         position: absolute;
         top: 30px;
@@ -576,9 +641,13 @@
             <span class="sep">/</span>
             <span class="total" id="tot">1</span>
         </div>
+
+        <div class="nav-mini">
+            <div class="nav-btn" id="navPrev" title="Назад (←)">‹</div>
+            <div class="nav-btn" id="navNext" title="Вперёд (→)">›</div>
+        </div>
     </div>
 
-    <!-- Таймер вне миникарты — поверх всего -->
     <div class="timer" id="timer">
         <div class="timer-row" id="timerDragHandle">
             <div class="btn" id="timerToggle" title="Старт / Пауза">
@@ -618,7 +687,6 @@
         </div>
     </div>
 
-    <!-- Debug — независимо от миникарты -->
     <div class="debug-menu" id="debugMenu">
         <div class="debug-header" id="debugHeader">
             <span class="title">DEBUG</span>
@@ -662,6 +730,7 @@
     </div>
 
     <div class="minimap" id="minimap">
+        <div class="minimap-close" id="minimapClose" title="Закрыть (Esc)">×</div>
         <div class="minimap-grid" id="minimapGrid"></div>
         <div class="minimap-hint">O — закрыть · Insert — debug · T — таймер · L — lap</div>
     </div>
@@ -674,7 +743,6 @@
         let debugVisible = false;
         let timerOnTop = false;
 
-        /* --- Таймер MM:SS:CS --- */
         let timerRunning = false;
         let timerStart = 0;
         let timerElapsed = 0;
@@ -779,7 +847,6 @@
 
         setToggleIcon(true);
 
-        /* --- Таймер: перетаскивание --- */
         (function makeTimerDraggable() {
             const el = document.getElementById('timer');
             const handle = document.getElementById('timerDragHandle');
@@ -811,7 +878,6 @@
             });
         })();
 
-        /* --- Debug --- */
         let frameTimes = [];
         let lastFrameTime = performance.now();
         let jankCount = 0;
@@ -933,7 +999,6 @@
         }
         requestAnimationFrame(debugLoop);
 
-        /* --- Debug показать / скрыть --- */
         function showDebug() {
             const menu = document.getElementById('debugMenu');
             menu.style.display = 'block';
@@ -958,7 +1023,6 @@
         }
         document.getElementById('debugClose').addEventListener('click', hideDebug);
 
-        /* --- Debug: перетаскивание --- */
         (function makeDebugDraggable() {
             const menu = document.getElementById('debugMenu');
             const header = document.getElementById('debugHeader');
@@ -991,7 +1055,6 @@
             });
         })();
 
-        /* --- Контент --- */
         function getContent() {
             const f = window.parent.document.getElementById('content-frame');
             return f ? f.contentWindow : null;
@@ -1055,6 +1118,8 @@
             document.querySelectorAll('.thumb').forEach((t, i) => {
                 t.classList.toggle('active', i === current);
             });
+            document.getElementById('navPrev').classList.toggle('disabled', current <= 0);
+            document.getElementById('navNext').classList.toggle('disabled', current >= total - 1);
         }
 
         function goTo(n) {
@@ -1085,6 +1150,20 @@
         }
 
         document.getElementById('counter').addEventListener('click', toggleMinimap);
+
+        document.getElementById('minimapClose').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeMinimap();
+        });
+
+        document.getElementById('navPrev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            prev();
+        });
+        document.getElementById('navNext').addEventListener('click', (e) => {
+            e.stopPropagation();
+            next();
+        });
 
         function handleKey(k) {
             if (k === 'o' || k === 'O' || k === 'щ' || k === 'Щ') {
